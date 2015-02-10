@@ -1,10 +1,12 @@
-SEED_GENERATION = [ [1,1], [1,2], [1,3], [1,4], [1,5], [1,6] ]
-
 class Game
   DEFAULT_GAME_VALUES = {
-    seed_chance_of_living: 0.30,
-    seed_size:             10,
-    render_size:           15
+    seed_chance_of_living:         0.30,
+    seed_size:                     10,
+    render_size:                   15,
+    remain_alive_lower_threshhold: 2,
+    remain_alive_upper_threshhold: 3,
+    dead_cell_becomes_alive:       3,
+    size_of_neighborhood:          1
   }
 
   attr_accessor :current_generation
@@ -57,7 +59,7 @@ class Game
     @current_generation.each do |coordinate|
       "calucate whether living cell remains alive"
       living_neighbors = count_living_neighbors(coordinate)
-      if ( living_neighbors == 2 or living_neighbors == 3 )
+      if ( living_neighbors == DEFAULT_GAME_VALUES[:remain_alive_lower_threshhold] or living_neighbors == DEFAULT_GAME_VALUES[:remain_alive_upper_threshhold] )
         @next_generation << coordinate
       end 
     end
@@ -66,7 +68,7 @@ class Game
       "caluculate whether dead cell becomes alive"
       neighbor_coordinate_finder(coordinate).each do |coordinate|
         living_neighbors = count_living_neighbors(coordinate) unless is_living?(coordinate)
-        if ( living_neighbors == 3 )
+        if ( living_neighbors == DEFAULT_GAME_VALUES[:dead_cell_becomes_alive] )
           @next_generation << coordinate
         end 
       end
@@ -77,8 +79,9 @@ class Game
     neighbor_coordinates = Array.new
     x = coordinate[0]
     y = coordinate[1]
-    ((x-1)..(x+1)).each do |i|
-      ((y-1)..(y+1)).each { |j| neighbor_coordinates << [i,j] }
+    radius = DEFAULT_GAME_VALUES[:size_of_neighborhood]
+    ((x-radius)..(x+radius)).each do |i|
+      ((y-radius)..(y+radius)).each { |j| neighbor_coordinates << [i,j] }
     end
     neighbor_coordinates.delete([x,y])
     neighbor_coordinates
