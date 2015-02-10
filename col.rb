@@ -7,23 +7,27 @@ class Game
   def initialize(seed)
     @current_generation = seed
     @next_generation = Array.new
+    render_generation
   end
 
   def tick
-    render_generation
     compute_next_generation
     compile_generation
+    render_generation
   end
 
   private
 
   def render_generation
     (-10..10).each do |x|
-      line = (-10..10).collect do |y|
-        return "X" if @current_generation.include?([x,y])
-        return "_"
+      (-10..10).each do |y|
+        if @current_generation.include?([x,y])
+          print "0"
+        else
+          print "."
+        end
       end
-      puts line
+      puts ""
     end
   end
 
