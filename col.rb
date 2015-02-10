@@ -1,4 +1,4 @@
-SEED_GENERATION = [ [1,1], [1,2], [2,1], [2,2] ]
+SEED_GENERATION = [ [1,1], [1,2], [1,3], [1,4], [1,5], [1,6] ]
 
 class Game
   attr_accessor :current_generation
@@ -18,11 +18,18 @@ class Game
   private
 
   def render_generation
-    puts @current_generation
+    (-10..10).each do |x|
+      line = (-10..10).collect do |y|
+        return "X" if @current_generation.include?([x,y])
+        return "_"
+      end
+      puts line
+    end
   end
 
   def compile_generation
-    @current_generation = @next_generation.uniq!
+    @next_generation.uniq!
+    @current_generation = @next_generation
     @next_generation = Array.new
   end
 
@@ -37,11 +44,12 @@ class Game
 
     @current_generation.each do |coordinate|
       "caluculate whether dead cell becomes alive"
-
-      living_neighbors = count_living_neighbors(coordinate) unless is_living?(coordinate)
-      if ( living_neighbors == 3 )
-        @next_generation << coordinate
-      end 
+      neighbor_coordinate_finder(coordinate).each do |coordinate|
+        living_neighbors = count_living_neighbors(coordinate) unless is_living?(coordinate)
+        if ( living_neighbors == 3 )
+          @next_generation << coordinate
+        end 
+      end
     end
   end
 
