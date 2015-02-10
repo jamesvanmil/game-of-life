@@ -1,11 +1,17 @@
 SEED_GENERATION = [ [1,1], [1,2], [1,3], [1,4], [1,5], [1,6] ]
 
 class Game
+  DEFAULT_GAME_VALUES = {
+    seed_chance_of_living: 0.30,
+    seed_size:             10,
+    render_size:           15
+  }
+
   attr_accessor :current_generation
   attr_accessor :next_generation
 
-  def initialize(seed)
-    @current_generation = seed
+  def initialize
+    @current_generation = generate_seed
     @next_generation = Array.new
     render_generation
   end
@@ -18,9 +24,19 @@ class Game
 
   private
 
-  def render_generation
-    (-10..10).each do |x|
-      (-10..10).each do |y|
+  def generate_seed(size = DEFAULT_GAME_VALUES[:seed_size], chance_of_living = DEFAULT_GAME_VALUES[:seed_chance_of_living])
+    grid = Array.new
+    ((-(size))..size).each do |x|
+      ((-(size))..size).each do |y|
+        grid << [x,y] if rand < chance_of_living
+      end
+    end
+    grid
+  end
+
+  def render_generation(render_size = 15)
+    ((-(render_size))..render_size).each do |x|
+      ((-(render_size))..render_size).each do |y|
         if @current_generation.include?([x,y])
           print "0"
         else
