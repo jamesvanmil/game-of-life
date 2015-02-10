@@ -6,7 +6,8 @@ class Game
     remain_alive_lower_threshhold: 2,
     remain_alive_upper_threshhold: 3,
     dead_cell_becomes_alive:       3,
-    size_of_neighborhood:          1
+    size_of_neighborhood:          1,
+    run_turns:                     100
   }
 
   attr_accessor :current_generation
@@ -16,6 +17,10 @@ class Game
     @current_generation = generate_seed
     @next_generation = Array.new
     render_generation
+  end
+
+  def run
+    DEFAULT_GAME_VALUES[:run_turns].times { tick }
   end
 
   def tick
@@ -47,6 +52,7 @@ class Game
       end
       puts ""
     end
+    puts "\n\n\n"
   end
 
   def compile_generation
