@@ -1,22 +1,48 @@
 class Game
+  require 'ostruct'
+  
+  ### Configuration
+
   DEFAULT_GAME_VALUES = {
     seed_chance_of_living:         0.30,
     seed_size:                     10,
-    render_size:                   15,
-    remain_alive_lower_threshhold: 2,
-    remain_alive_upper_threshhold: 3,
-    dead_cell_becomes_alive:       3,
-    size_of_neighborhood:          1,
+    render_size_x:                 50,
+    render_size_y:                 25,
     run_turns:                     100
   }
 
-  attr_accessor :current_generation
-  attr_accessor :next_generation
+  CELL_FATE = {
+    ## for living cells
+    alive: {
+      0 => false,
+      1 => false,
+      2 => true,
+      3 => true,
+      4 => false,
+      5 => false,
+      6 => false,
+      7 => false,
+      8 => false
+    },
+    ## for dead cells
+    dead: {
+      0 => false,
+      1 => false,
+      2 => false,
+      3 => true,
+      4 => false,
+      5 => false,
+      6 => false,
+      7 => false,
+      8 => false
+    }
+  }
+  
+  ### Begin class definition
 
   def initialize
-    @current_generation = generate_seed
-    @next_generation = Array.new
-    render_generation
+    @cells = Hash.new
+    seeds.each { |coordinate| create_cell(coordinate[0], coordinate[1]) }
   end
 
   def run
@@ -24,27 +50,50 @@ class Game
   end
 
   def tick
-    compute_next_generation
-    compile_generation
+    calculate_all_votes
+    delete_cells_that_are_going_to_die
+    enliven_cells_that_remain_and_reset_votes
     render_generation
   end
 
   private
 
-  def generate_seed(size = DEFAULT_GAME_VALUES[:seed_size], chance_of_living = DEFAULT_GAME_VALUES[:seed_chance_of_living])
-    grid = Array.new
-    ((-(size))..size).each do |x|
-      ((-(size))..size).each do |y|
-        grid << [x,y] if rand < chance_of_living
+  ### Primary functions
+
+  def seeds
+    seeds = Array.new
+    ((-DEFAULT_GAME_VALUES[:seed_size])..(DEFAULT_GAME_VALUES[:seed_size])).each do |x|
+      ((-DEFAULT_GAME_VALUES[:seed_size])..(DEFAULT_GAME_VALUES[:seed_size])).each do |y|
+        seeds << [x, y] if rand < DEFAULT_GAME_VALUES[:seed_chance_of_living]
       end
     end
-    grid
+    seeds
   end
 
-  def render_generation(render_size = 15)
-    ((-(render_size))..render_size).each do |x|
-      ((-(render_size))..render_size).each do |y|
-        if @current_generation.include?([x,y])
+  def calculate_all_votes
+    @cells.keys.each { |coordinate| vote_for_neighbors(coordinate[0], coordinate[1]) }
+  end
+
+  def delete_cells_that_are_going_to_die
+    @cells.keys.each do |coordinate|
+      destroy_cell(coordinate[0], coordinate[1]) unless alive_next_turn?(@cells[coordinate])
+    end
+  end
+
+  def enliven_cells_that_remain_and_reset_votes
+    @cells.keys.each do |coordinate|
+      @cells[coordinate].status = :alive 
+      @cells[coordinate].votes = 0
+    end
+  end
+
+  def render_generation
+    system("clear")
+    x = DEFAULT_GAME_VALUES[:render_size_x]
+    y = DEFAULT_GAME_VALUES[:render_size_y]
+    ((-y)..y).each do |y|
+      ((-x)..x).each do |x|
+        if @cells.keys.include?([x,y])
           print "0"
         else
           print "."
@@ -52,57 +101,48 @@ class Game
       end
       puts ""
     end
-    puts "\n\n\n"
+    sleep 0.1
   end
 
-  def compile_generation
-    @next_generation.uniq!
-    @current_generation = @next_generation
-    @next_generation = Array.new
+  ### Secondary functions
+
+  def create_cell(x, y, votes = 0, status: :alive)
+    "The hash key keeps track of the coordinates"
+    @cells[[x, y]] = OpenStruct.new(votes: votes, status: status)
   end
 
-  def compute_next_generation
-    @current_generation.each do |coordinate|
-      "calucate whether living cell remains alive"
-      living_neighbors = count_living_neighbors(coordinate)
-      if ( living_neighbors == DEFAULT_GAME_VALUES[:remain_alive_lower_threshhold] or living_neighbors == DEFAULT_GAME_VALUES[:remain_alive_upper_threshhold] )
-        @next_generation << coordinate
-      end 
-    end
+  def destroy_cell(x, y)
+    @cells.delete([x, y])
+  end
+  
+  def alive_next_turn?(cell)
+    CELL_FATE[cell.status][cell.votes]
+  end
 
-    @current_generation.each do |coordinate|
-      "caluculate whether dead cell becomes alive"
-      neighbor_coordinate_finder(coordinate).each do |coordinate|
-        living_neighbors = count_living_neighbors(coordinate) unless is_living?(coordinate)
-        if ( living_neighbors == DEFAULT_GAME_VALUES[:dead_cell_becomes_alive] )
-          @next_generation << coordinate
-        end 
-      end
+  def vote_for_neighbors(x, y)
+    neighbor_coordinates(x, y).each do |coordinate|
+      cast_vote(coordinate[0], coordinate[1])
     end
   end
 
-  def neighbor_coordinate_finder(coordinate)
+  ### Tertiary functions
+
+  def cast_vote(x, y)
+    ## if exists, vote++
+    if @cells.keys.include?([x, y])
+      @cells[[x, y]].votes += 1
+    else
+    ## else create dead cell with one vote
+      create_cell(x, y, votes = 1, status: :dead)
+    end
+  end
+
+  def neighbor_coordinates(x, y)
     neighbor_coordinates = Array.new
-    x = coordinate[0]
-    y = coordinate[1]
-    radius = DEFAULT_GAME_VALUES[:size_of_neighborhood]
-    ((x-radius)..(x+radius)).each do |i|
-      ((y-radius)..(y+radius)).each { |j| neighbor_coordinates << [i,j] }
+    ((x-1)..(x+1)).each do |x|
+      ((y-1)..(y+1)).each { |y| neighbor_coordinates << [x, y] }
     end
-    neighbor_coordinates.delete([x,y])
+    neighbor_coordinates.delete([x, y])
     neighbor_coordinates
-  end
-
-  def count_living_neighbors(coordinate)
-    counter = 0 
-    neighbor_coordinate_finder(coordinate).each do |coordinate|
-      counter += 1 if is_living?(coordinate)
-    end
-    counter
-  end
-
-  def is_living?(coordinate)
-      return true if @current_generation.include?(coordinate)
-      false
   end
 end
